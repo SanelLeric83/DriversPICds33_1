@@ -1,317 +1,94 @@
-#include <33FJ128MC506A.h>
-#include "128MC506ARegsV1.h"
-
-
-
-
-
-
+#include <33FJ32MC204.h>
+#include "32MC204RegsV1.h"
 #FUSES NOWDT                    //No Watch Dog Timer
 #FUSES CKSFSM                   //Clock Switching is enabled, fail Safe clock monitor is enabled
-#FUSES NOJTAG                   //JTAG disabled
+#FUSES NOJTAG,PR_PLL                   //JTAG disabled
+
+/*
+Izgleda da je za AN0 i AN1, da uzimaju iz BUF0 i BUF1 potrebno za
+CH0 pojacalo staviti AN1, a za CH1, AN0, u respektivnim CHS0A i CH123 
+registrima.
+
+Ovo radi, hvala Allahu dž.š. Naredni primjeri, kao nastavak ovoga bi trebali
+da ukljuce ostale kanale.
+Nakon toga, aBd, ostale nacine rada ADC-a, tj. prekidi, skeniranje kanala
+i alternativno skeniranje.
+
+Trebam imati 4 ili makar 3 konverzije kanala na raspolaganju, za punu 
+kontrolu motora, poput FOC ili recimao za mjerenje temperature modula
+ili struje i napona mosta itd.
+
+
+*/
+
+
 
 #device ICSP=1
-#use delay(crystal=10M)
+#use delay(crystal=10M,clock=40M)
 
-
+volatile unsigned int  ADCValue,ADResultAN ;
+void PORT_Init(void);
+void ADC_Init(void);
 
 
 void main()
 {
-   //STATUS.IPL1=1;
-   //CORCON->DL=7;
-   //MODCON.BWM=0b1010;
-   //XMODSRT->MODSRT=0x8000;
-   //XMODEND->MODEND=0x8000;
-   //YMODSRT->MODSRT=0x8000;
-   //YMODEND->MODEND=0x8000;
-   //XBREV.XB=0x8000;
-   //DISICNT.DICNT=0x4000;
-   //BSRAM->IWBSR=1;
-   //SSRAM->IWSSR=1;
-   //CNEN1->CNEN|=(1<<0)|(1<<12);
-   //CNEN2->CNEN16_18=0b111;
-   //CNPU1->CNPU=0x8000;
-   //CNPU2.CN18PUE=1;  
-   //INTCON1->OSCFAIL=1;
-   //INTCON2.INT4EP=1;
-   //IFS0.IC2IF=0;
-   //IFS1->CNIF=1;
-   //IFS2.IC3IF=1;
-   //IFS3->QEIIF=1;
-   //IFS4.FLTBIF=1;
-   //IEC0->AD1IE=1;
-   //IEC1.CNIE=1;
-   //IEC2->IC3IE=1;
-   //IEC3->FLTAIE=1;
-   //IEC4.FLTBIE=1;
-   //IPC0->INT0IP=7;
-   //IPC1->IC2IP=4;
-   //IPC2->U1RXIP0=1;
-   //IPC3->AD1IP=7;
-   //IPC4.CNIP2=1;
-   //IPC5.INT1IP|=(1<<1);
-   //IPC6->DMA2IP1=1;
-   //IPC7->T5IP=0b110;
-   //IPC8.SPI2IP=5;
-   //IPC9->IC5IP=7;
-   //IPC10.IC6IP0=1;
-   //IPC11.T6IP=5;
-   //IPC12->T7IP=4;
-   //IPC13.INT4IP=6;
-   //IPC14->PWMIP=7;
-   //IPC15->FLTAIP=7;
-   //IPC17.DMA7IP=3;
-   //INTTREG->ILR=(1<<2)|(1<<0);
-   //TMR1->TMR=0xFF00;
-   //PR1.PR=0xFFC0;
-   //T1CON.TON=1;
-   //TMR2->TMR=0xFF00;
-   //TMR3->TMR=0xFF00;
-   //PR2.PR=0xFFC0;
-   //PR3.PR=0xFFC0;
-   //TMR3HLD.TMRHLD=0xFF00;
-   //T2CON->TON=1;
-   //T3CON->TGATE=1;
-   //TMR4->TMR=0xFF00;
-  //TMR5HLD.TMRHLD=0xFF00;
-  //TMR5->TMR=0xFF00;
-  //PR4.PR=0xFFC0;
-  //PR5.PR=0xFFC0;
-  //T4CON->TON=1;
-  //T5CON->TGATE=1;
-  //TMR6->TMR=0xFF00;
-  //TMR7HLD.TMRHLD=0xFF00;
-  //TMR7->TMR=0xFF00;
-  //PR6.PR=0xFFC0;
-  //PR7.PR=0xFFC0; 
-  //T6CON->TON=1;
-  //T7CON->TGATE=1; 
-  //TMR8->TMR=0xFF00;
-  //TMR9HLD.TMRHLD=0xFF00; 
-  //PR8.PR=0xFFC0;
-  //PR9.PR=0xFFC0;  
-  //T8CON->TON=1;
-  //T9CON->TGATE=1;  
-  //IC1BUF.ICBUF=0x4F00; 
-  //IC1CON->ICM=7; 
-  //IC2BUF.ICBUF=0x4F00; 
-  //IC2CON->ICM=7;  
-  //IC3BUF.ICBUF=0x4F00; 
-  //IC3CON->ICI=3; 
-  //IC4BUF.ICBUF=0x4C00; 
-  //IC4CON->ICM=7;   
-  //IC5BUF.ICBUF=0x4F00; 
-  //IC6CON->ICI=3; 
-  //IC7BUF.ICBUF=0x4C00; 
-  //IC8CON->ICM=7;  
-  //OC1RS.OCRS=0xFF0C; 
-  //OC1R->OCR=0xFFCE; 
-  //OC1CON.OCFLT=1; 
-  //OC2RS.OCRS=0xFF0C; 
-  //OC2R->OCR=0xFFCE; 
-  //OC2CON.OCSIDL=1;  
-  //OC3RS.OCRS=0xFF0C; 
-  //OC3R->OCR=0xFFCE; 
-  //OC3CON.OCFLT=1; 
-  //OC4RS.OCRS=0xFF0C; 
-  //OC4R->OCR=0xFFCE; 
-  //OC4CON.OCSIDL=1;   
-  //OC5RS.OCRS=0xFF0C; 
-  //OC5R->OCR=0xFFCE; 
-  //OC5CON.OCFLT=1; 
-  //OC6RS.OCRS=0xFF0C; 
-  //OC6R->OCR=0xFFCE; 
-  //OC6CON.OCSIDL=1;   
-  //OC7RS.OCRS=0xFF0C; 
-  //OC7R->OCR=0xFFCE; 
-  //OC7CON.OCFLT=1; 
-  //OC8RS.OCRS=0xFF0C; 
-  //OC8R->OCR=0xFFCE; 
-  //OC8CON.OCSIDL=1;    
-  //P1TCON->PTMOD=3; 
-  //P1TMR->PTMR=0x4000; 
-  //P1TPER->PTPER=0x4000; 
-  //P1SECMP.SEVTCMP=0x4000; 
-  //PWM1CON1->PENH=0b1100; 
-  //PWM1CON2.OSYNC=1; 
-  //P1DTCON1->DTA=0x3F;
-  //P1DTCON2->DTS=0b11010011; 
-  //P1FLTACON.FAEN=0b1100; 
-  //P1FLTBCON->FBOV=0xFC; 
-  //P1OVDCON.POVD6=0b111011; 
-  //P1DC1->PDC1=0x0FEC;
-  //P1DC2->PDC2=0x0FEC; 
-  //P1DC3->PDC3=0x0FEC; 
-  //P1DC4->PDC4=0x0FEC; 
-  //QEI1CON.QEIM=7; 
-  //DFLT1CON.QECK=5; 
-  //POS1CNT->POSCNT=0x0FEC; 
-  //MAX1CNT->MAXCNT=0x0FEC; 
-  //I2C1RCV->I2CRCV=0xCC; 
-  //I2C1TRN.I2CTRN=0xCE; 
-  //I2C1BRG->I2CBRG=0x1FF; 
-  //I2C1CON->I2CEN=1; 
-  //I2C1STAT->IWCOL=1; 
-  //I2C1ADD.I2CADD=0x22C; 
-  //I2C1MSK.I2CMSK=0x22D; 
-  //I2C2RCV->I2CRCV=0xCC; 
-  //I2C2TRN.I2CTRN=0xCE; 
-  //I2C2BRG->I2CBRG=0x1FF;  
-  //I2C2CON->I2CEN=1;  
-  //I2C2STAT.I2COV=1; 
-  //I2C2ADD.I2CADD=0x22C; 
-  //I2C2MSK.I2CMSK=0x22D; 
-  //U1MODE->UARTEN=1;
-  //U1STA.FERR=1;
-  //U1TXREG.UTXREG=0x1FC;
-  //U1RXREG.URXREG=0x1FC;
-  //U1BRG->UBRG=0xFF00;
-  //U2MODE.IREN=1;
-  //U2STA->OERR=1;
-  //U2TXREG.UTXREG=0x1FC;
-  //U2RXREG.URXREG=0x1FC;
-  //U2BRG->UBRG=0xFF00;
-  //SPI1STAT.SPIEN=1;
-  //SPI1CON1->PPRE=3;
-  //SPI1CON2.FRMDLY=1;
-  //SPI1BUF->SPIBUF=0xCCCC;
-  //SPI2STAT.SPIEN=1;
-  //SPI2CON1->SMP=1;
-  //SPI2CON2.FRMDLY=1;
-  //SPI2BUF->SPIBUF=0xCCCC;
-  //ADC1BUF0.ADCBUF0=0xFF00;
-  //AD1CON1->SSRC=7;
-  //AD1CON2.SMPI=0b1010;
-  //AD1CON3->SAMC=0x1E;
-  //AD1CON4.DMABL=7;
-  //AD1CHS123.CH123NA=3;
-  //AD1CHS0.CH0SA=0x1E;
-  //AD1PCFGL.PCFG|=(1<<10)|(1<<7)|(1<<0);
-  //AD1PCFGH->PCFG|=(1<<10)|(1<<7)|(1<<0);
-  //AD1CSSL.CSS2=1;
-  //AD1CSSH->CSS27=1;
-  //DMA0CON.MODE=3;
-  //DMA0REQ->FORCE=1;
-  //DMA0STA.DMASTA=0xFFFF;
-  //DMA0STB.DMASTB=0xFFFF;
-  //DMA0PAD.DMAPAD=0xFFFF;
-  //DMA0CNT->DMACNT=0x3FF;
-  //DMA1CON.AMODE=3;
-  //DMA1REQ->IRQSEL1=1;
-  //DMA1STA.DMASTA=0xFFFF;
-  //DMA1STB.DMASTB=0xFFFF;
-  //DMA1PAD.DMAPAD=0xFFFF;
-  //DMA1CNT->DMACNT=0x3FF;
-  //DMA2CON.AMODE=3;
-  //DMA2REQ->IRQSEL1=1;
-  //DMA2STA.DMASTA=0xFFFF;
-  //DMA2STB.DMASTB=0xFFFF;
-  //DMA2PAD.DMAPAD=0xFFFF;
-  //DMA2CNT->DMACNT=0x3FF;
-  //DMA3CON.AMODE=3;
-  //DMA3REQ->IRQSEL1=1;
-  //DMA3STA.DMASTA=0xFFFF;
-  //DMA3STB.DMASTB=0xFFFF;
-  //DMA3PAD.DMAPAD=0xFFFF;
-  //DMA3CNT->DMACNT=0x3FF;
-  //DMA4CON.AMODE=3;
-  //DMA4REQ->IRQSEL1=1;
-  //DMA4STA.DMASTA=0xFFFF;
-  //DMA4STB.DMASTB=0xFFFF;
-  //DMA4PAD.DMAPAD=0xFFFF;
-  //DMA4CNT->DMACNT=0x3FF;
-  //DMA5CON.AMODE=3;
-  //DMA5REQ->IRQSEL1=1;
-  //DMA5STA.DMASTA=0xFFFF;
-  //DMA5STB.DMASTB=0xFFFF;
-  //DMA5PAD.DMAPAD=0xFFFF;
-  //DMA5CNT->DMACNT=0x3FF;
-  //DMA6CON.AMODE=3;
-  //DMA6REQ->IRQSEL1=1;
-  //DMA6STA.DMASTA=0xFFFF;
-  //DMA6STB.DMASTB=0xFFFF;
-  //DMA6PAD.DMAPAD=0xFFFF;
-  //DMA6CNT->DMACNT=0x3FF;
-  //DMA7CON.AMODE=3;
-  //DMA7REQ->IRQSEL1=1;
-  //DMA7STA.DMASTA=0xFFFF;
-  //DMA7STB.DMASTB=0xFFFF;
-  //DMA7PAD.DMAPAD=0xFFFF;
-  //DMA7CNT->DMACNT=0x3FF;
-  //DMACS0.XWCOL6=1;
-  //DMACS1->PPST=0b11110011;
-  //DSADR.DSADRR=0xFFFF;
-  //TRISB.TRIS=0x00FF;
-  //PORTB->PORT=0xFFFF;
-  //LATB.LB15=1;
-  //TRISC->TRISC12=0;
-  //PORTC->RC12=1;
-  //LATC.LC12=1;
-  //TRISD.TRIS&=~((1<<1)|(1<<11));
-  //PORTD->RD1=1;
-  //LATD->LATD1=1;
-  //ODCD.ODCD11=1;
-  //TRISE.TRIS&=~((1<<1)|(1<<7));
-  //PORTE->RE1=1;
-  //LATE->LATE7=1;
-  //TRISF.TRIS&=~((1<<0)|(1<<6));
-  //PORTF->RF0=1;
-  //LATF->LATF6=1;
-  //ODCF.ODCF4=1;
-  //TRISG.TRISL=3;
-  //PORTG->RG2=1;
-  //LATG->LATG6=1;
-  //ODCG.ODCG8=1;
-  //RCON->BOR=1;
-  //OSCCON.LOCK=1;
-  //CLKDIV->PLLPRE=0x1D;
-  //PLLFBD.PLLDIV=0x1F4;
-  //OSCTUN->TUN4=1;
-  //NVMCON.NVMOP=0b1110;
-  //NVMKEY->NVMKEYR=0xCF;
-  //PMD1.AD1MD=1;
-  //PMD2->IC1MD=1;
-  //PMD3.T6MD=1;
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+
+   PORT_Init();
+   ADC_Init();
    while(TRUE)
    {
-      //TODO: User Code
+     AD1CON1.SAMP = 1;
+     delay_us(30);
+     AD1CON1.SAMP = 0;
+     while(!AD1CON1.DONE);
+     ADResultAN = ADC1BUF1.ADCBUF;
+     ADCValue=ADC1BUF0.ADCBUF;
+     LATC.LAT=ADCValue;
+     LATB.LAT=ADResultAN;
+     }
+       
+    }
+
+void PORT_Init(void)
+ {
+  TRISA.TRISA0=1;//Ulazni pin
+  TRISA.TRISA1=1;//Ulazni pin
+  TRISB.TRIS=0x0000;
+  TRISC.TRIS=0x0000;//PORTC je izlazni.
+  AD1PCFGL.PCFG=0b111111111;//Pocetno, svi digitalni pinovi.
+  AD1PCFGL.PCFG0=0;//Analogni pin.
+  AD1PCFGL.PCFG1=0;//Analogni pin.
+  }
+  
+ void ADC_Init(void)
+  {
+   AD1CON1.ADON=0;//Iskljucimo AD dok se konfigurise.
+   AD1CON1.ADCON1=0x0000;
+   AD1CON1.AD12B=0;//10-bitna konverzija.
+   AD1CON1.FORM=0b00;//Integer bez znaka format
+   AD1CON1.SSRC=0;//Internal counter ends sampling and starts conversion
+                      //(auto-convert)
+   //AD1CON1.SIMSAM=1;
+   AD1CON2.CHPS=0b11;
+   AD1CON1.ASAM=0;//0 = Sampling begins when SAMP bit is set
+   AD1CON2.ALTS=0;//Always uses channel input selects for Sample A
+   AD1CON2.VCFG=100;//AVdd-AVss=Vref+--Vref-
+   AD1CON3.ADCS=0x3F;//Tad=64xTcy=12.8ms, za odabrani clock od 10MHz.
+   AD1CON3.ADRC=0;//0 = Clock derived from system clock
+   AD1CON3.SAMC=31;
+   AD1CHS0.CH0NA=0;//0 = Channel 0 negative input is VREF-
+   AD1CHS0.CH0SA=0b0001;//00000 = Channel 0 positive input is AN1
+   AD1CHS123.CH123NA=0b00;//00 = CH1, CH2, CH3 negative input is VREF-
+   AD1CHS123.CH123SA=0;//0 = CH1 positive input is AN0, CH2 positive input 
+                       //is AN1, CH3 positive input is AN2
+   //AD1CHS123.CH123NB=0b00;//00 = CH1, CH2, CH3 negative input is VREF-
+   //AD1CHS123.CH123SB=0;//1 = CH1 positive input is AN3, CH2 positive 
+                           //input is AN4, CH3 positive input is AN5
+   AD1CON1.SAMP= 0;                        
+   AD1CON1.ADON=1;
    }
 
-}
+  
+
+
